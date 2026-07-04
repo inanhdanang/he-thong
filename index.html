@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hệ Thống Tiêu Chí Giao Dịch — Scalping Forex M1/M3/M5/M15</title>
+<meta name="description" content="Hệ thống tiêu chí giao dịch scalping Forex đa khung thời gian, dựa trên RSI & MACD.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0c0f0a;
+    --panel: #14180f;
+    --panel-2: #1a1f14;
+    --line: #2a3020;
+    --amber: #e8a33d;
+    --amber-dim: #8a6a2e;
+    --green: #2fbf8f;
+    --red: #ff6b6b;
+    --text: #ecefe6;
+    --muted: #8d9480;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  a{color:inherit;}
+  ::selection{ background: var(--amber); color:#0c0f0a; }
+
+  /* ---------- Ticker tape ---------- */
+  .ticker-wrap{
+    background:#08090a;
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+    white-space:nowrap;
+    padding:8px 0;
+  }
+  .ticker{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:12.5px;
+    letter-spacing:0.06em;
+    color: var(--amber-dim);
+    animation: scroll-left 32s linear infinite;
+    padding-left:100%;
+  }
+  .ticker span{ margin-right:36px; }
+  .ticker .up{color:var(--green);}
+  .ticker .down{color:var(--red);}
+  @keyframes scroll-left{
+    0%{ transform: translateX(0); }
+    100%{ transform: translateX(-100%); }
+  }
+
+  /* ---------- Nav ---------- */
+  header.nav{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:22px 6vw;
+    border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:50;
+    background:rgba(12,15,10,0.88);
+    backdrop-filter: blur(8px);
+  }
+  .brand{
+    font-family:var(--display); font-weight:700; font-size:18px;
+    display:flex; align-items:center; gap:10px;
+    letter-spacing:0.01em;
+  }
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--green); box-shadow:0 0 8px var(--green); animation:blink 2s ease-in-out infinite;}
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  nav.links{ display:flex; gap:28px; font-size:13.5px; font-family:var(--mono); color:var(--muted);}
+  nav.links a{ text-decoration:none; transition:color .2s; }
+  nav.links a:hover{ color:var(--amber); }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    padding: 90px 6vw 70px;
+    display:grid; grid-template-columns: 1.15fr 0.85fr; gap:60px;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:12.5px; color:var(--green);
+    letter-spacing:0.14em; text-transform:uppercase; margin-bottom:18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:"●"; font-size:9px; }
+  h1{
+    font-family:var(--display); font-weight:700;
+    font-size: clamp(32px, 4.2vw, 54px);
+    line-height:1.08; letter-spacing:-0.01em;
+    color:#fff; margin-bottom:22px;
+  }
+  h1 .hl{ color: var(--amber); }
+  .hero p.lead{
+    color:var(--muted); font-size:16.5px; max-width:52ch; margin-bottom:30px;
+  }
+  .hero-cta{ display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    font-family:var(--mono); font-size:13.5px; font-weight:500;
+    padding:13px 22px; border-radius:3px; text-decoration:none;
+    display:inline-flex; align-items:center; gap:8px;
+    transition: all .2s;
+    border:1px solid var(--line);
+  }
+  .btn-primary{ background:var(--amber); color:#151005; border-color:var(--amber); }
+  .btn-primary:hover{ background:#f4b455; transform:translateY(-1px); }
+  .btn-ghost{ color:var(--text); }
+  .btn-ghost:hover{ border-color:var(--amber-dim); color:var(--amber); }
+
+  /* hero visual: mini order ticket */
+  .ticket{
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:var(--mono);
+    font-size:13px;
+    position:relative;
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,0.7);
+  }
+  .ticket-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px; border-bottom:1px dashed var(--line);
+    color:var(--muted); font-size:11.5px; letter-spacing:0.05em;
+  }
+  .ticket-head .buy{ color:var(--green); font-weight:600; background:rgba(47,191,143,0.12); padding:3px 9px; border-radius:3px;}
+  .ticket-body{ padding:18px; }
+  .ticket-row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+  .ticket-row .k{ color:var(--muted); }
+  .ticket-row .v{ color:var(--text); }
+  .ticket-row .v.ok{ color:var(--green); }
+  .ticket-checklist{ padding:0 18px 18px; }
+  .cl-item{ display:flex; gap:10px; align-items:flex-start; font-size:12px; color:var(--muted); padding:5px 0; }
+  .cl-item .box{ color:var(--green); flex-shrink:0; }
+  .cl-item.on{ color:var(--text); }
+  .ticket::before, .ticket::after{
+    content:""; position:absolute; width:16px; height:16px; background:var(--bg);
+    border-radius:50%; top:56px;
+  }
+  .ticket::before{ left:-8px; } .ticket::after{ right:-8px; }
+
+  /* ---------- Section shell ---------- */
+  section{ padding:80px 6vw; border-bottom:1px solid var(--line); }
+  .section-head{ margin-bottom:44px; max-width:60ch; }
+  .section-head .eyebrow{ color:var(--amber); }
+  .section-head h2{
+    font-family:var(--display); font-size:clamp(24px,2.6vw,34px);
+    color:#fff; font-weight:600; margin-bottom:12px;
+  }
+  .section-head p{ color:var(--muted); font-size:15px; }
+
+  /* ---------- File tree (repo structure) ---------- */
+  .tree{
+    font-family:var(--mono); font-size:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:26px 30px; max-width:780px;
+  }
+  .tree .row{ display:flex; align-items:center; gap:10px; padding:7px 0; color:var(--muted); }
+  .tree .row a{ text-decoration:none; color:var(--text); transition:color .15s; }
+  .tree .row a:hover{ color:var(--amber); }
+  .tree .row .tag{
+    margin-left:auto; font-size:10.5px; padding:2px 8px; border-radius:3px;
+    border:1px solid var(--line); color:var(--muted); letter-spacing:0.04em;
+  }
+  .tree .indent1{ padding-left:26px; }
+  .tree .branch{ color:var(--amber-dim); }
+  .tree .folder{ color:var(--amber); }
+
+  /* ---------- Concept grid ---------- */
+  .grid4{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:22px; }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    overflow:hidden; transition: transform .25s, border-color .25s;
+  }
+  .card:hover{ transform:translateY(-4px); border-color:var(--amber-dim); }
+  .card img{ width:100%; display:block; background:#fff; }
+  .card-body{ padding:18px 20px 22px; }
+  .card-tag{ font-family:var(--mono); font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px; }
+  .card-tag.bear{ color:var(--red); } .card-tag.bull{ color:var(--green); } .card-tag.neutral{ color:var(--amber); }
+  .card h3{ font-family:var(--display); font-size:17px; color:#fff; margin-bottom:8px; }
+  .card p{ color:var(--muted); font-size:13.5px; }
+  .card-link{ display:block; padding:12px 20px; font-family:var(--mono); font-size:12px; color:var(--amber-dim); border-top:1px solid var(--line); text-decoration:none;}
+  .card-link:hover{ color:var(--amber); }
+
+  /* ---------- Timeline (real decision sequence) ---------- */
+  .timeline{ max-width:760px; }
+  .step{ display:grid; grid-template-columns:52px 1fr; gap:20px; padding:22px 0; border-bottom:1px solid var(--line); }
+  .step:last-child{ border-bottom:none; }
+  .step .num{ font-family:var(--mono); font-size:13px; color:var(--amber); border:1px solid var(--amber-dim); border-radius:50%; width:38px; height:38px; display:flex; align-items:center; justify-content:center; }
+  .step h4{ font-family:var(--display); font-size:16px; color:#fff; margin-bottom:6px; }
+  .step p{ color:var(--muted); font-size:14px; }
+  .step .warn{ color:var(--red); font-family:var(--mono); font-size:12.5px; margin-top:6px; }
+
+  /* ---------- Criteria checklist (signature order-ticket, full) ---------- */
+  .criteria-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:820px){ .criteria-wrap{ grid-template-columns:1fr; } .hero{ grid-template-columns:1fr; padding-top:60px;} }
+  .req-ticket{
+    font-family:var(--mono);
+    background: repeating-linear-gradient(135deg, var(--panel), var(--panel) 2px, var(--panel-2) 2px, var(--panel-2) 4px);
+    background-color:var(--panel);
+    border:1px solid var(--line); border-radius:6px; padding:0; position:relative;
+  }
+  .req-ticket .th{ padding:16px 20px; border-bottom:1px dashed var(--line); display:flex; justify-content:space-between; align-items:center;}
+  .req-ticket .th .label{ font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+  .req-ticket .th .count{ font-family:var(--display); font-weight:700; color:var(--amber); font-size:20px; }
+  .req-ticket ul{ list-style:none; padding:18px 20px 22px; }
+  .req-ticket li{ display:flex; gap:12px; padding:9px 0; font-size:13.5px; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .req-ticket li:last-child{ border-bottom:none; }
+  .req-ticket li .chk{ color:var(--green); font-weight:600; }
+  .bonus-ticket .chk{ color:var(--amber); }
+  .bonus-ticket .th .count{ color:var(--amber); }
+
+  /* ---------- CTA cards ---------- */
+  .cta-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; }
+  .cta-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:26px 24px;
+    text-decoration:none; transition: all .2s; display:block;
+  }
+  .cta-card:hover{ border-color:var(--amber); transform:translateY(-3px); }
+  .cta-card .ic{ font-size:22px; margin-bottom:14px; display:block; }
+  .cta-card h4{ font-family:var(--display); color:#fff; font-size:16px; margin-bottom:6px; }
+  .cta-card p{ color:var(--muted); font-size:13px; }
+  .cta-card .go{ font-family:var(--mono); font-size:11.5px; color:var(--amber-dim); margin-top:14px; display:block; }
+
+  footer{ padding:50px 6vw; text-align:center; }
+  footer .disclaimer{
+    max-width:620px; margin:0 auto 24px; color:var(--muted); font-size:12.5px;
+    border:1px solid var(--line); border-radius:6px; padding:16px 20px; background:var(--panel);
+  }
+  footer .credit{ font-family:var(--mono); font-size:12px; color:var(--muted); }
+  footer .credit a{ color:var(--amber-dim); text-decoration:none; }
+
+  .reveal{ opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease; }
+  .reveal.show{ opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="ticker-wrap">
+  <div class="ticker">
+    <span class="up">EURUSD ▲ RSI hồi tụ M5</span>
+    <span>XAUUSD — chờ đóng nến M1</span>
+    <span class="down">GBPUSD ▼ phân kỳ MACD H.gram</span>
+    <span>USDJPY — đồng thuận M15/M5: TĂNG</span>
+    <span class="up">EURUSD ▲ RSI hồi tụ M5</span>
+    <span>XAUUSD — chờ đóng nến M1</span>
+    <span class="down">GBPUSD ▼ phân kỳ MACD H.gram</span>
+    <span>USDJPY — đồng thuận M15/M5: TĂNG</span>
+  </div>
+</div>
+
+<header class="nav">
+  <div class="brand"><span class="dot"></span>hệ-thống<span style="color:var(--muted); font-weight:400;">/scalping-fx</span></div>
+  <nav class="links">
+    <a href="#nguyen-tac">Nguyên tắc</a>
+    <a href="#quy-trinh">Quy trình</a>
+    <a href="#tieu-chi">Tiêu chí</a>
+    <a href="#tai-lieu">Tài liệu</a>
+    <a href="https://github.com/inanhdanang/he-thong" target="_blank">GitHub ↗</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div>
+    <div class="eyebrow">RSI + MACD · M1 / M3 / M5 / M15</div>
+    <h1>Trước khi vào lệnh,<br>hỏi <span class="hl">hệ thống</span> — đừng hỏi cảm xúc.</h1>
+    <p class="lead">Bộ tiêu chí giao dịch scalping Forex đa khung thời gian — tổng hợp nguyên tắc phân kỳ/hội tụ RSI-MACD, đồng thuận đa khung, và quản lý lệnh, dùng cho tài khoản Exness.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="docs/01-he-thong-tieu-chi-giao-dich.md">📘 Đọc tài liệu đầy đủ</a>
+      <a class="btn btn-ghost" href="templates/trade_journal_exness.xlsx">⇩ Tải Trade Journal</a>
+    </div>
+  </div>
+
+  <div class="ticket">
+    <div class="ticket-head">
+      <span>ORDER TICKET · M3</span>
+      <span class="buy">BUY</span>
+    </div>
+    <div class="ticket-body">
+      <div class="ticket-row"><span class="k">Entry</span><span class="v">1.08420</span></div>
+      <div class="ticket-row"><span class="k">Stop Loss</span><span class="v">1.08310</span></div>
+      <div class="ticket-row"><span class="k">Take Profit</span><span class="v">1.08585</span></div>
+      <div class="ticket-row"><span class="k">R : R</span><span class="v ok">1 : 1.5</span></div>
+    </div>
+    <div class="ticket-checklist">
+      <div class="cl-item on"><span class="box">✓</span> M15 không giảm mạnh</div>
+      <div class="cl-item on"><span class="box">✓</span> M5 đáy sau cao hơn đáy trước</div>
+      <div class="cl-item on"><span class="box">✓</span> RSI M3 hội tụ rõ ràng</div>
+      <div class="cl-item on"><span class="box">✓</span> Nến M1 xác nhận tăng</div>
+      <div class="cl-item on"><span class="box">✓</span> Đã có SL + R:R ≥ 1:1.5</div>
+    </div>
+  </div>
+</section>
+
+<section id="nguyen-tac">
+  <div class="section-head reveal">
+    <div class="eyebrow">01 · Nền tảng</div>
+    <h2>Bốn tín hiệu kỹ thuật cốt lõi</h2>
+    <p>Rút ra từ chuỗi phân tích RSI & MACD — mỗi hình là một trạng thái thị trường bạn cần nhận ra trong vài giây trên khung M1–M3.</p>
+  </div>
+  <div class="grid4">
+    <div class="card reveal">
+      <img src="images/01-phan-ky-giam-rsi.svg" alt="Phân kỳ giảm RSI">
+      <div class="card-body">
+        <div class="card-tag bear">Cảnh báo giảm</div>
+        <h3>Phân kỳ RSI (Bearish)</h3>
+        <p>Giá tạo đỉnh cao hơn nhưng RSI tạo đỉnh thấp hơn — lực mua đang cạn.</p>
+      </div>
+      <a class="card-link" href="images/01-phan-ky-giam-rsi.svg">Xem hình gốc →</a>
+    </div>
+    <div class="card reveal">
+      <img src="images/02-hoi-tu-tang-rsi.svg" alt="Hội tụ tăng RSI">
+      <div class="card-body">
+        <div class="card-tag bull">Cảnh báo tăng</div>
+        <h3>Hội tụ RSI (Bullish)</h3>
+        <p>Giá tạo đáy thấp hơn nhưng RSI tạo đáy cao hơn — lực bán đang cạn.</p>
+      </div>
+      <a class="card-link" href="images/02-hoi-tu-tang-rsi.svg">Xem hình gốc →</a>
+    </div>
+    <div class="card reveal">
+      <img src="images/03-macd-histogram-phan-ky.svg" alt="Phân kỳ MACD Histogram">
+      <div class="card-body">
+        <div class="card-tag neutral">Xác nhận</div>
+        <h3>Phân kỳ MACD Histogram</h3>
+        <p>Cột histogram thấp dần dù giá vẫn lên — tín hiệu suy yếu được củng cố.</p>
+      </div>
+      <a class="card-link" href="images/03-macd-histogram-phan-ky.svg">Xem hình gốc →</a>
+    </div>
+    <div class="card reveal">
+      <img src="images/04-da-khung-thoi-gian.svg" alt="Đa khung thời gian">
+      <div class="card-body">
+        <div class="card-tag neutral">Bối cảnh</div>
+        <h3>Đồng thuận đa khung</h3>
+        <p>M15 → M5 → M3 → M1: khung lớn định hướng, khung nhỏ định điểm vào.</p>
+      </div>
+      <a class="card-link" href="images/04-da-khung-thoi-gian.svg">Xem hình gốc →</a>
+    </div>
+  </div>
+</section>
+
+<section id="quy-trinh">
+  <div class="section-head reveal">
+    <div class="eyebrow">02 · Trình tự bắt buộc</div>
+    <h2>Quy trình ra quyết định — 7 bước</h2>
+    <p>Đây là trình tự thật, đi theo đúng thứ tự từ khung lớn xuống khung nhỏ. Dừng ở bất kỳ bước nào không đạt.</p>
+  </div>
+  <div class="timeline">
+    <div class="step reveal">
+      <div class="num">1</div>
+      <div><h4>Nhìn M15 — xu hướng chung</h4><p>Đang tăng, giảm hay sideway? Nếu không rõ ràng và không phải sideway đẹp:</p><div class="warn">→ ĐỨNG NGOÀI</div></div>
+    </div>
+    <div class="step reveal">
+      <div class="num">2</div>
+      <div><h4>Nhìn M5 — xác nhận cấu trúc</h4><p>Cấu trúc đỉnh/đáy có đồng thuận với M15 không?</p><div class="warn">→ Không đồng thuận: ĐỨNG NGOÀI</div></div>
+    </div>
+    <div class="step reveal">
+      <div class="num">3</div>
+      <div><h4>Nhìn M3 — vùng vào lệnh</h4><p>Có hội tụ/phân kỳ RSI-MACD rõ ràng tại vùng giá hợp lý chưa?</p><div class="warn">→ Chưa rõ: CHỜ, không đuổi giá</div></div>
+    </div>
+    <div class="step reveal">
+      <div class="num">4</div>
+      <div><h4>Nhìn M1 — điểm kích hoạt</h4><p>Đã có nến xác nhận (thân nến rõ ràng, không doji) chưa?</p></div>
+    </div>
+    <div class="step reveal">
+      <div class="num">5</div>
+      <div><h4>Đối chiếu 5/5 tiêu chí bắt buộc</h4><p>Thiếu một tiêu chí — không thương lượng.</p><div class="warn">→ Thiếu 1: KHÔNG VÀO LỆNH</div></div>
+    </div>
+    <div class="step reveal">
+      <div class="num">6</div>
+      <div><h4>Quản lý lệnh sau khi vào</h4><p>Chốt một phần khi có dấu hiệu suy yếu đầu tiên, dời SL về hòa vốn.</p></div>
+    </div>
+    <div class="step reveal">
+      <div class="num">7</div>
+      <div><h4>Ghi nhật ký ngay sau khi đóng lệnh</h4><p>Không có ngoại lệ — đây là dữ liệu để tinh chỉnh hệ thống sau ~100 lệnh.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tieu-chi">
+  <div class="section-head reveal">
+    <div class="eyebrow">03 · Bộ lọc trước khi bấm lệnh</div>
+    <h2>Tiêu chí bắt buộc & tiêu chí cộng điểm</h2>
+    <p>Tách hai nhóm để tránh nghịch lý "khắt khe quá thì cả ngày không có lệnh nào". Nhóm bắt buộc không bao giờ được hạ thấp.</p>
+  </div>
+  <div class="criteria-wrap">
+    <div class="req-ticket reveal">
+      <div class="th"><span class="label">Bắt buộc · thiếu 1 là dừng</span><span class="count">5/5</span></div>
+      <ul>
+        <li><span class="chk">✓</span> M15 không ngược xu hướng dự kiến</li>
+        <li><span class="chk">✓</span> M5 xác nhận cấu trúc đáy/đỉnh</li>
+        <li><span class="chk">✓</span> RSI M3 hội tụ / phân kỳ rõ ràng</li>
+        <li><span class="chk">✓</span> Nến M1 xác nhận theo đúng hướng</li>
+        <li><span class="chk">✓</span> Đã xác định SL + R:R ≥ 1:1.5</li>
+      </ul>
+    </div>
+    <div class="req-ticket bonus-ticket reveal">
+      <div class="th"><span class="label">Cộng điểm · càng nhiều càng tốt</span><span class="count">+N</span></div>
+      <ul>
+        <li><span class="chk">+</span> MACD Histogram cùng chiều xác nhận</li>
+        <li><span class="chk">+</span> Giá tại vùng hỗ trợ/kháng cự hoặc Fibo 0.5–0.618</li>
+        <li><span class="chk">+</span> Không có tin tức lớn trong 15–30 phút tới</li>
+        <li><span class="chk">+</span> Đang trong phiên London/New York</li>
+        <li><span class="chk">+</span> Biến động nến gần đây bình thường</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="tai-lieu">
+  <div class="section-head reveal">
+    <div class="eyebrow">04 · Kho tài liệu</div>
+    <h2>Cấu trúc repository</h2>
+    <p>Toàn bộ nội dung được tổ chức theo 3 thư mục — nhấn để mở trực tiếp trên GitHub.</p>
+  </div>
+  <div class="tree reveal">
+    <div class="row"><span class="branch">📁</span> <a href="docs/01-he-thong-tieu-chi-giao-dich.md">docs/01-he-thong-tieu-chi-giao-dich.md</a><span class="tag">Tài liệu chính</span></div>
+    <div class="row"><span class="branch">📁</span> <a href="docs/02-checklist-nhanh.md">docs/02-checklist-nhanh.md</a><span class="tag">In nhanh</span></div>
+    <div class="row"><span class="branch">🖼</span> <a href="images/">images/*.svg</a><span class="tag">5 hình minh họa</span></div>
+    <div class="row"><span class="branch">📊</span> <a href="templates/trade_journal_exness.xlsx">templates/trade_journal_exness.xlsx</a><span class="tag">Nhật ký lệnh</span></div>
+    <div class="row"><span class="branch">📄</span> <a href="README.md">README.md</a><span class="tag">Tổng quan</span></div>
+  </div>
+
+  <div class="cta-grid reveal" style="margin-top:36px;">
+    <a class="cta-card" href="docs/01-he-thong-tieu-chi-giao-dich.md">
+      <span class="ic">📘</span>
+      <h4>Tài liệu đầy đủ</h4>
+      <p>12 nguyên tắc nền tảng, bộ tiêu chí chi tiết, quản lý vốn cho Exness.</p>
+      <span class="go">Mở tài liệu →</span>
+    </a>
+    <a class="cta-card" href="docs/02-checklist-nhanh.md">
+      <span class="ic">✅</span>
+      <h4>Checklist nhanh</h4>
+      <p>Bản rút gọn để dán cạnh màn hình khi vào lệnh thực tế.</p>
+      <span class="go">Mở checklist →</span>
+    </a>
+    <a class="cta-card" href="templates/trade_journal_exness.xlsx">
+      <span class="ic">📊</span>
+      <h4>Trade Journal (.xlsx)</h4>
+      <p>Nhật ký lệnh Exness — tự tính Win Rate, R:R trung bình, Dashboard.</p>
+      <span class="go">Tải file →</span>
+    </a>
+  </div>
+</section>
+
+<footer>
+  <div class="disclaimer reveal">
+    ⚠️ Tài liệu mang tính chất tổng hợp kiến thức & giáo dục cá nhân, không phải lời khuyên đầu tư/tài chính. Forex có đòn bẩy — rủi ro mất vốn cao. Hãy tự backtest và forward-test trên demo trước khi dùng vốn thật.
+  </div>
+  <div class="credit">hệ-thống/scalping-fx · cập nhật qua <a href="https://github.com/inanhdanang/he-thong">GitHub</a></div>
+</footer>
+
+<script>
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('show'); obs.unobserve(e.target); } });
+  }, {threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+
+</body>
+</html>
